@@ -1,7 +1,7 @@
 from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters
 
 from config import API_KEY
-from handlers import *
+from handlers import AddingHandler, BotCommands, DeletionHandler, PracticingHandler
 
 
 def main() -> None:
@@ -10,8 +10,6 @@ def main() -> None:
     bot.add_handler(CommandHandler("start", BotCommands.start))
     bot.add_handler(CommandHandler("main", BotCommands.main_page))
     bot.add_handler(MessageHandler(filters.Regex("(Show my\ndictionary)"), BotCommands.dict_shower))
-    
-
     
     ch1_adding_new_word = ConversationHandler(
         entry_points=[MessageHandler(filters.Regex("(Add new\nword)"), AddingHandler.adding_start)],
@@ -47,7 +45,8 @@ def main() -> None:
         )
     bot.add_handler(ch3_delete_records)
 
-    bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+
+    bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, BotCommands.echo))
     bot.run_polling()
 
 

@@ -49,7 +49,7 @@ class DelTable(Model):
 		database = db
 		table_name = "deleting"
 
-
+#поиграть с наследованием
 def db_content_shower(command: str) -> str:
 	main_table_query = Word.select()
 	output_str = ""
@@ -109,6 +109,13 @@ class Adding:
 
 # ch2_practicing
 class Practice:
+	def __init__(self, *, answer_to_check=None, answer_to_change=None, element=None, options=None):
+		self.answer_to_check = answer_to_check
+		self.answer_to_change = answer_to_change
+		self.element = element
+		self.options = options
+
+
 	def checking_availability():
 		try:
 			main_table_query = Word.select()
@@ -136,36 +143,43 @@ class Practice:
 		for round_number in range(1, 3):
 			session_query = Session.select().where(Session.code_number==round_number).order_by(Session.number_of_mistakes, Session.main_table_id.desc())
 			main_table_options_query = Word.select()
-			options = [option.translate for option in main_table_options_query]
+			options = [option.translate for option in main_table_options_query] if round_number==1 else [option.word for option in main_table_options_query]
 			for row in session_query:
 				session_row = [[row.id, row.main_table_id, row.word, row.translate, row.code_number, row.number_of_mistakes],
-					Practice.choicer(options, row.translate), round_number]
+					Practice(options=options, element=row.translate if round_number==1 else row.word).choicer(), round_number]
 				return session_row
 
 
-	# def checking_for_correctness()
-
-
-	def first_round_updater(answer):
-		row_to_change = Practice.first_round()
-		right_code_number = row_to_change[0][4] + 1
-		right_number_of_mistakes = row_to_change[0][5] + 1
-
-		if answer == "right":
-			Session.update(code_number=right_code_number).where(Session.id==row_to_change[0][0]).execute()
-
+	def checking_for_correctness(self):
+		row_to_check = Practice.first_round()
+		if (row_to_check[2] == 1 and self.answer_to_check == row_to_check[0][3]) or (row_to_check[2] == 2 and self.answer_to_check == row_to_check[0][2]):
+			evaluation = "right"
 		else:
-			Session.update(number_of_mistakes=right_number_of_mistakes).where(Session.id==row_to_change[0][0]).execute()
+			evaluation = "wrong"
+		Practice(answer_to_change=evaluation).first_round_updater()
+		return evaluation
 		
 
-	def choicer(options, translate):
-		final_options = [translate]
+	def choicer(self):
+		final_options = [self.element]
 		while len(final_options) < 4:
-			option = choice(options)
+			option = choice(self.options)
 			if option not in final_options:
 				final_options.append(option)
 		final_options.sort()
 		return final_options
+
+
+	def first_round_updater(self):
+		row_to_change = Practice.first_round()
+		right_code_number = row_to_change[0][4] + 1
+		right_number_of_mistakes = row_to_change[0][5] + 1
+
+		if self.answer_to_change == "right":
+			Session.update(code_number=right_code_number).where(Session.id==row_to_change[0][0]).execute()
+
+		else:
+			Session.update(number_of_mistakes=right_number_of_mistakes).where(Session.id==row_to_change[0][0]).execute()
 
 
 	def session_table_deletion():
@@ -215,10 +229,6 @@ class Deletion:
 			right_id = main_table_list.index(item) + 1
 			if item != right_id:
 				Word.update(id=right_id).where(Word.id==item).execute()
-
-
-
-# Session.update(code_number=2).where(Session.id==row_to_change[0][0]).execute()
 
 
 
