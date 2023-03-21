@@ -1,20 +1,11 @@
 from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters
 
 from config import API_KEY
-from handlers import AddingHandler, BotCommands, DeletionHandler, PracticingHandler
+from general.handlers import BotCommands
+from adding.handlers import AddingHandler
+from deletion.handlers import DeletionHandler
+from practices.handlers import PracticingHandler
 
-
-#24 
-# + навести порядок (особенно в handlers) (возможно добавить некоторые классы) 
-#добавить данетку
-#добавить статистику (отдельный класс статистикс)
-
-#типизацию добавить
-#поправить по Pep8
-
-#добить возможность сунуть в название таблицы chatid
-#возможно надо добавить возможность изменить позицию
-#сортировать словарь в алфавитном пордке
 
 def main() -> None:
     bot = Application.builder().token(API_KEY).build()
@@ -22,7 +13,8 @@ def main() -> None:
     bot.add_handler(CommandHandler("start", BotCommands.start))
     bot.add_handler(CommandHandler("main", BotCommands.main_page))
     bot.add_handler(MessageHandler(filters.Regex("(Show my\ndictionary)"), BotCommands.dict_shower))
-    
+    bot.add_handler(CommandHandler("n", BotCommands.necessity_counter))
+
     ch1_adding_new_word = ConversationHandler(
         entry_points=[MessageHandler(filters.Regex("(Add new\nword)"), AddingHandler.adding_start)],
         states={
@@ -37,14 +29,13 @@ def main() -> None:
     ch2_practice = ConversationHandler(
         entry_points=[MessageHandler(filters.Regex("(Practice)"), PracticingHandler.practice_start)],
         states={
-            "practice": [MessageHandler(filters.TEXT, PracticingHandler.practice_checking)]
+            "select_number": [MessageHandler(filters.TEXT, PracticingHandler.practice_select_number)],
+            "practice": [MessageHandler(filters.TEXT, PracticingHandler.practice_checking)],
         },
         fallbacks=[],
         conversation_timeout=60
     )
     bot.add_handler(ch2_practice)
-    #переделать таблицу с добавлением столбца с ошибками), добавить возможность избрать лимит
-    #сделать данетку
 
     ch3_delete_records = ConversationHandler(
         entry_points=[MessageHandler(filters.Regex("(Delete records)"), DeletionHandler.deletion_start)],
@@ -63,4 +54,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
