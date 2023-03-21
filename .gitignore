@@ -1,0 +1,7 @@
+config.py
+reqs.txt
+__pycache__/
+database/
+other_staff/
+venv/
+
