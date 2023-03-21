@@ -7,26 +7,27 @@ from handlers import *
 def main() -> None:
     bot = Application.builder().token(API_KEY).build()
 
-    bot.add_handler(CommandHandler("start", start))
-    bot.add_handler(MessageHandler(filters.Regex("(Show my\ndictionary)"), dict_shower))
-    bot.add_handler(MessageHandler(filters.Regex("(Main page)"), main_page))
+    bot.add_handler(CommandHandler("start", BotCommands.start))
+    bot.add_handler(CommandHandler("main", BotCommands.main_page))
+    bot.add_handler(MessageHandler(filters.Regex("(Show my\ndictionary)"), BotCommands.dict_shower))
+    
 
     
-    ch1_new_word = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("(Add new\nword)"), ch1_start)],
+    ch1_adding_new_word = ConversationHandler(
+        entry_points=[MessageHandler(filters.Regex("(Add new\nword)"), AddingHandler.adding_start)],
         states={
-            "adding":[MessageHandler(filters.TEXT, ch1_get_word)],
-            "adding_confirmation": [MessageHandler(filters.TEXT, ch1_get_confirmation)]
+            "adding_start":[MessageHandler(filters.TEXT, AddingHandler.get_data)],
+            "adding_confirmation": [MessageHandler(filters.TEXT, AddingHandler.get_adding_confirmation)]
         },
         fallbacks=[],
         conversation_timeout=120
     )
-    bot.add_handler(ch1_new_word)
+    bot.add_handler(ch1_adding_new_word)
 
     ch2_practice = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("(Practice)"), ch2_start)],
+        entry_points=[MessageHandler(filters.Regex("(Practice)"), PracticingHandler.practice_start)],
         states={
-            "practice": [MessageHandler(filters.TEXT, ch2_checking)]
+            "practice": [MessageHandler(filters.TEXT, PracticingHandler.practice_checking)]
         },
         fallbacks=[],
         conversation_timeout=60
@@ -36,20 +37,15 @@ def main() -> None:
     #сделать данетку
 
     ch3_delete_records = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("(Delete records)"), ch3_deleting)],
+        entry_points=[MessageHandler(filters.Regex("(Delete records)"), DeletionHandler.deletion_start)],
         states={
-            "delete": [MessageHandler(filters.TEXT, ch3_confirmation)],
-            "confirmation": [MessageHandler(filters.TEXT, ch3_finish)]
+            "deletion_start": [MessageHandler(filters.TEXT, DeletionHandler.get_data_for_deletion)],
+            "deletion_confirmation": [MessageHandler(filters.TEXT, DeletionHandler.get_deletion_confirmation)]
             },
         fallbacks=[],
         conversation_timeout=140
         )
     bot.add_handler(ch3_delete_records)
-    #сделать смену индексов когда удаляется слово из середины
-
-
-    #добавить клавиатуры confirmation (mb inline)
-
 
     bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
     bot.run_polling()
