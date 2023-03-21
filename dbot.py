@@ -4,6 +4,18 @@ from config import API_KEY
 from handlers import AddingHandler, BotCommands, DeletionHandler, PracticingHandler
 
 
+#24 
+# + навести порядок (особенно в handlers) (возможно добавить некоторые классы) 
+#добавить данетку
+#добавить статистику (отдельный класс статистикс)
+
+#типизацию добавить
+#поправить по Pep8
+
+#добить возможность сунуть в название таблицы chatid
+#возможно надо добавить возможность изменить позицию
+#сортировать словарь в алфавитном пордке
+
 def main() -> None:
     bot = Application.builder().token(API_KEY).build()
 
@@ -44,7 +56,6 @@ def main() -> None:
         conversation_timeout=140
         )
     bot.add_handler(ch3_delete_records)
-
 
     bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, BotCommands.echo))
     bot.run_polling()

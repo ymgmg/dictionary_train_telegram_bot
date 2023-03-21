@@ -4,8 +4,9 @@ from random import choice
 from peewee import *
 
 
-
 db = SqliteDatabase("database/dict_bot.db")
+
+
 #в закладках есть страница про тирпизацию в которой есть мой вопрос по table_name
 class Word(Model):
 	word = CharField()
@@ -31,11 +32,17 @@ class Session(Model):
 		# table_name = f"session{a}"
 		table_name = "session"
 
+class SessionStat(Model):
+	amount_of_rounds = IntegerField()
+	amount_of_right_answers = IntegerField()
+
+	class Meta:
+		database = db
+		table_name = "session_stat"
 
 class AddingTable(Model):
 	word = CharField()
 	translate = CharField()
-	date = IntegerField()
 
 	class Meta:
 		database = db
@@ -66,15 +73,25 @@ def db_content_shower(command: str) -> str:
 
 # ch1_adding
 class Adding:
-	def __init__(self, *, data=None, command=None):
+	def __init__(self, *, data=None):
 		self.data = data
-		self.command = command
+		try:
+			adding_dict = {}
+			adding_dict["word"] = self.data[0].strip().capitalize()
+			adding_dict["translate"] = ""
+			for item in self.data[1:]:
+				adding_dict["translate"] += item.strip()
+			adding_dict["translate"] = adding_dict["translate"].capitalize()
+			self.adding_data = adding_dict
+		except AttributeError:
+			return None
 
 	def creating_adding_table(self) -> None:
 		db.drop_tables([AddingTable])
 		db.create_tables([AddingTable])
 		with db.atomic():
-			AddingTable.create(**self.data)
+			AddingTable.create(**self.adding_data)
+		return True
 
 
 	def checking_uniqueness_of_new_word():
@@ -99,17 +116,16 @@ class Adding:
 		return query_answer
 
 
-	def main_table_converter(self) -> None:
-		if self.command == "yes":
-			db.create_tables([Word])
-			with db.atomic():
-				Word.create(**Adding.collect_addition())
+	def main_table_converter() -> None:
+		db.create_tables([Word])
+		with db.atomic():
+			Word.create(**Adding.collect_addition())
 		db.drop_tables([AddingTable])
 
 
 # ch2_practicing
 class Practice:
-	def __init__(self, *, answer_to_check=None, answer_to_change=None, element=None, options=None):
+	def __init__(self, answer_to_check=None, answer_to_change=None, element=None, options=None):
 		self.answer_to_check = answer_to_check
 		self.answer_to_change = answer_to_change
 		self.element = element
@@ -126,8 +142,11 @@ class Practice:
 
 	def creating_practice_table() -> list:
 		db.drop_tables([Session])
+		db.drop_tables([SessionStat])
 		db.create_tables([Session])
-		main_table_query = Word.select().order_by(Word.date).limit(3)
+		db.create_tables([SessionStat])
+		main_table_query = Word.select().order_by(Word.date).limit(7)
+
 		for row in main_table_query:
 			session_row = {
 				"main_table_id": row.id,
@@ -135,28 +154,67 @@ class Practice:
 				"translate": row.translate,
 				"code_number": 1,
 				"number_of_mistakes": 0}
+
 			with db.atomic():
 				Session.create(**session_row)
 
+		data = {
+			"amount_of_rounds": 0,
+			"amount_of_right_answers": 0
+		}
+		with db.atomic():
+			SessionStat.create(**data)
 
-	def first_round():
+	def process():
+		return NotImplementedError
+
+
+	def checking_for_correctness(self):
+		return NotImplementedError
+
+		
+	def choicer(self):
+		return NotImplementedError
+
+
+	def process_round_updater(self):
+		return NotImplementedError
+
+	def process_stat(self):
+		return NotImplementedError
+
+
+	def session_table_deletion():
+		session_query = Session.select()
+		for row in session_query:
+			Word.update(date=datetime.now().strftime("%Y%m%d%H%M%S")).where(Word.id==row.main_table_id).execute()
+		db.drop_tables([Session])
+		db.drop_tables([SessionStat])
+
+
+class PracticeOneToFour(Practice):
+	def __init__(self, *, answer_to_check=None, answer_to_change=None, element=None, options=None):
+		super().__init__(answer_to_check, answer_to_change, element, options)
+
+
+	def process():
 		for round_number in range(1, 3):
 			session_query = Session.select().where(Session.code_number==round_number).order_by(Session.number_of_mistakes, Session.main_table_id.desc())
 			main_table_options_query = Word.select()
 			options = [option.translate for option in main_table_options_query] if round_number==1 else [option.word for option in main_table_options_query]
 			for row in session_query:
 				session_row = [[row.id, row.main_table_id, row.word, row.translate, row.code_number, row.number_of_mistakes],
-					Practice(options=options, element=row.translate if round_number==1 else row.word).choicer(), round_number]
+					PracticeOneToFour(options=options, element=row.translate if round_number==1 else row.word).choicer(), round_number]
 				return session_row
 
 
 	def checking_for_correctness(self):
-		row_to_check = Practice.first_round()
+		row_to_check = PracticeOneToFour.process()
 		if (row_to_check[2] == 1 and self.answer_to_check == row_to_check[0][3]) or (row_to_check[2] == 2 and self.answer_to_check == row_to_check[0][2]):
 			evaluation = "right"
 		else:
 			evaluation = "wrong"
-		Practice(answer_to_change=evaluation).first_round_updater()
+		PracticeOneToFour(answer_to_change=evaluation).process_round_updater()
 		return evaluation
 		
 
@@ -169,55 +227,60 @@ class Practice:
 		final_options.sort()
 		return final_options
 
-
-	def first_round_updater(self):
-		row_to_change = Practice.first_round()
+	def process_round_updater(self):
+		row_to_change = PracticeOneToFour.process()
 		right_code_number = row_to_change[0][4] + 1
 		right_number_of_mistakes = row_to_change[0][5] + 1
 
+		session_stat = PracticeOneToFour.process_stat()
+		# session_round_counter = session_stat[0] + 1
+		# session_right_answers_counter = session_stat[1] + 1
+		SessionStat.update(amount_of_rounds=session_stat[0] + 1).where(SessionStat.id==1).execute()
+
 		if self.answer_to_change == "right":
 			Session.update(code_number=right_code_number).where(Session.id==row_to_change[0][0]).execute()
+			SessionStat.update(amount_of_right_answers=session_stat[1] + 1).where(SessionStat.id==1).execute()
 
 		else:
 			Session.update(number_of_mistakes=right_number_of_mistakes).where(Session.id==row_to_change[0][0]).execute()
 
 
-	def session_table_deletion():
-		session_query = Session.select()
-		for row in session_query:
-			Word.update(date=datetime.now().strftime("%Y%m%d%H%M%S")).where(Word.id==row.main_table_id).execute()
-		db.drop_tables([Session])
+	def process_stat():
+		session_stat_table_query = SessionStat.select()
+		for row in session_stat_table_query:
+			stat = [row.amount_of_rounds, row.amount_of_right_answers]
+			return stat
 
-
+			
 # ch3_deleting
 class Deletion:
-	def __init__(self, *, words_ids=None, command=None):
-		self.words_ids = words_ids
-		self.command = command
+	def __init__(self, *, ids_to_delete=None):
+		self.ids_to_delete = ids_to_delete
+
 
 	def obtainig_for_deletion(self):
 		db.drop_tables([DelTable])
-		confirmation_string = "Are you sure you wanna delete the records below:\n"
-		for word_id in self.words_ids:
-			data = {"del_id": word_id}
+		confirmation_string = ""
+		
+		for id_to_delete in self.ids_to_delete:
+			data = {"del_id": id_to_delete}
 
 			db.create_tables([DelTable])
 			with db.atomic():
 				DelTable.create(**data)
 
-			main_table_query = Word.select().where(Word.id==word_id)
+			main_table_query = Word.select().where(Word.id==id_to_delete)
 			for row in main_table_query:
 				list_for_deletion = f"\n{row.id}. {row.word} - {row.translate}"
 				confirmation_string += list_for_deletion
-		confirmation_string += "\nYes/No"
+		
 		return confirmation_string
 
 
-	def completing_deletion(self):
-		if self.command == "yes":
-			del_table_query = DelTable.select()
-			for row in del_table_query:
-				Word.delete().where(Word.id==row.del_id).execute()
+	def completing_deletion():
+		del_table_query = DelTable.select()
+		for row in del_table_query:
+			Word.delete().where(Word.id==row.del_id).execute()
 		db.drop_tables([DelTable])
 		Deletion.organize_ids()
 
