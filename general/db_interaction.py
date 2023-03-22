@@ -7,7 +7,7 @@ from config import DATABASE
 
 
 def db_content_shower(chat_id: str, command: str) -> str:
-    main_table_query = MainTable(chat_id).interaction().select()
+    main_table_query = MainTable(chat_id).db().select()
     output_str = ""
     if command == "without_translate":
         for row in main_table_query:
@@ -22,9 +22,9 @@ def db_content_shower(chat_id: str, command: str) -> str:
 
 def show_necessary_words(chat_id):
     date_now = datetime.now().timestamp()
-    main_table_query =  MainTable(chat_id).interaction().select()
+    main_table_query = MainTable(chat_id).db().select()
 
-    condition = date_now - MainTable(chat_id).interaction().date
+    condition = date_now - MainTable(chat_id).db().date
     words_count = main_table_query.count()
     one_day = main_table_query.where(condition > 86400).count()
     three_days = main_table_query.where(condition > 86400 * 3).count()
@@ -33,12 +33,14 @@ def show_necessary_words(chat_id):
     data = [words_count, one_day, three_days, five_days,]
     stat_string = f"You got {data[0]} words in your dictionary."
     for day_num in range(1, 4):
-        stat_string += f"\n{data[day_num]} words you haven't practiced for more than {day_num * 2 -1} day."
+        stat_string += f"\n{data[day_num]} words you haven't practiced\
+        \nfor more than {day_num * 2 -1} day."
     return stat_string
 
 
 def create_user_table(chat_id):
-    user_query = UserTable.select(UserTable.chat_id).where(UserTable.chat_id == chat_id)
+    user_query = UserTable.select(UserTable.chat_id).where(
+        UserTable.chat_id == chat_id)
     user_ids_list = [user_id.chat_id for user_id in user_query]
     if chat_id not in user_ids_list:
         data = {

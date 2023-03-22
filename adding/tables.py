@@ -16,9 +16,7 @@ class AddingTable:
     def __init__(self, chat_id):
         self.chat_id = chat_id
 
-    def interaction(self):
+    def db(self):
         new_table = AddingTableModel
         new_table._meta.table_name = f"{self.chat_id}_adding_table"
         return new_table
-
-

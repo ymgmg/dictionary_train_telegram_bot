@@ -5,18 +5,19 @@ from general.db_interaction import db_content_shower
 from utils.reply_keyboards import ReplyKeyboard
 
 
-
 class DeletionHandler:
-    async def deletion_start(update, context):
+    async def start(update, context):
         chat_id = update.message.chat.id
-        await update.message.reply_text(db_content_shower(chat_id=chat_id, command="with_translate"))
-        await update.message.reply_text("""Enter ordinar numbers of the records \
-            you want to delete through the sign (,)""")
-        return "deletion_start"
+        await update.message.reply_text(
+            db_content_shower(chat_id=chat_id, command="with_translate"))
+        await update.message.reply_text("Enter ordinar numbers of the records \
+            you want to delete through the sign (,)")
+        return "start"
 
-    async def get_data_for_deletion(update, context):
+    async def get_data(update, context):
         user_text = update.message.text
-        user_text = DeletionHandler.user_text_checker(user_text=user_text.split(","))
+        user_text = DeletionHandler.user_text_checker(
+            user_text=user_text.split(","))
         chat_id = update.message.chat.id
         if user_text is False:
             await update.message.reply_text("""Something went wrong.\n
@@ -24,24 +25,29 @@ class DeletionHandler:
             return ConversationHandler.END
 
         else:
-            confirmation_string = "Are you sure you wanna delete the records below:\n"
-            confirmation_string += DeletionDB(chat_id=chat_id, ids_to_delete=user_text).obtainig_for_deletion()
-            confirmation_string += "\n\nYes/No"
+            confirmation = "Are you sure you wanna delete the records below:\n"
+            confirmation += DeletionDB(
+                chat_id=chat_id, ids_to_delete=user_text
+                ).obtainig_for_deletion()
+            confirmation += "\n\nYes/No"
 
-            await update.message.reply_text(confirmation_string,
+            await update.message.reply_text(
+                confirmation,
                 reply_markup=ReplyKeyboard.yn_keyboard())
-            return "deletion_confirmation"
+            return "confirmation"
 
-    async def get_deletion_confirmation(update, context):
+    async def confirmation(update, context):
         user_text = update.message.text.lower()
         chat_id = update.message.chat.id
         if user_text == "yes":
             DeletionDB(chat_id=chat_id).completing_deletion()
-            await update.message.reply_text("The record is deleted",
+            await update.message.reply_text(
+                "The record is deleted",
                 reply_markup=ReplyKeyboard.main_keyboard())
 
         else:
-            await update.message.reply_text("You cancelled the deletion",
+            await update.message.reply_text(
+                "You cancelled the deletion",
                 reply_markup=ReplyKeyboard.main_keyboard())
         return ConversationHandler.END
 

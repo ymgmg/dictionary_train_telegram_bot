@@ -16,7 +16,7 @@ class StatTable:
     def __init__(self, chat_id):
         self.chat_id = chat_id
 
-    def interaction(self):
+    def db(self):
         new_table = StatModel
         new_table._meta.table_name = f"{self.chat_id}_stat_table"
         return new_table
@@ -35,11 +35,7 @@ class SessionStatTable:
     def __init__(self, chat_id):
         self.chat_id = chat_id
 
-    def interaction(self):
+    def db(self):
         new_table = SessionStatModel
         new_table._meta.table_name = f"{self.chat_id}_session_stat_table"
         return new_table
-
-
-
-

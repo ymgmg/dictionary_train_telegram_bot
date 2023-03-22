@@ -1,4 +1,5 @@
-from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters
+from telegram.ext import (
+    Application, CommandHandler, ConversationHandler, MessageHandler, filters)
 
 from config import API_KEY
 from general.handlers import BotCommands
@@ -12,43 +13,51 @@ def main() -> None:
 
     bot.add_handler(CommandHandler("start", BotCommands.start))
     bot.add_handler(CommandHandler("main", BotCommands.main_page))
-    bot.add_handler(MessageHandler(filters.Regex("(Show my\ndictionary)"), BotCommands.dict_shower))
+    bot.add_handler(CommandHandler("show_dictionary", BotCommands.dict_shower))
     bot.add_handler(CommandHandler("n", BotCommands.necessity_counter))
 
-    ch1_adding_new_word = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("(Add new\nword)"), AddingHandler.adding_start)],
+    adding_new_word = ConversationHandler(
+        entry_points=[MessageHandler(
+            filters.Regex("(Add new\nword)"), AddingHandler.start)],
         states={
-            "adding_start":[MessageHandler(filters.TEXT, AddingHandler.get_data)],
-            "adding_confirmation": [MessageHandler(filters.TEXT, AddingHandler.get_adding_confirmation)]
+            "start": [MessageHandler(filters.TEXT, AddingHandler.get_data)],
+            "confirmation": [MessageHandler(
+                filters.TEXT, AddingHandler.get_confirmation)]
         },
         fallbacks=[],
         conversation_timeout=120
     )
-    bot.add_handler(ch1_adding_new_word)
+    bot.add_handler(adding_new_word)
 
-    ch2_practice = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("(Practice)"), PracticingHandler.practice_start)],
+    delete_records = ConversationHandler(
+        entry_points=[MessageHandler(
+            filters.Regex("(Delete records)"), DeletionHandler.start)],
         states={
-            "select_number": [MessageHandler(filters.TEXT, PracticingHandler.practice_select_number)],
-            "practice": [MessageHandler(filters.TEXT, PracticingHandler.practice_checking)],
+            "start": [MessageHandler(filters.TEXT, DeletionHandler.get_data)],
+            "confirmation": [MessageHandler(
+                filters.TEXT, DeletionHandler.confirmation)]
+        },
+        fallbacks=[],
+        conversation_timeout=140
+    )
+    bot.add_handler(delete_records)
+
+    practice_one_to_four = ConversationHandler(
+        entry_points=[MessageHandler(
+            filters.Regex("(OneToFour)"), PracticingHandler.start)],
+        states={
+            "select_number": [MessageHandler(
+                filters.TEXT, PracticingHandler.select_number)],
+            "practice": [MessageHandler(
+                filters.TEXT, PracticingHandler.checking)],
         },
         fallbacks=[],
         conversation_timeout=60
     )
-    bot.add_handler(ch2_practice)
+    bot.add_handler(practice_one_to_four)
 
-    ch3_delete_records = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("(Delete records)"), DeletionHandler.deletion_start)],
-        states={
-            "deletion_start": [MessageHandler(filters.TEXT, DeletionHandler.get_data_for_deletion)],
-            "deletion_confirmation": [MessageHandler(filters.TEXT, DeletionHandler.get_deletion_confirmation)]
-            },
-        fallbacks=[],
-        conversation_timeout=140
-        )
-    bot.add_handler(ch3_delete_records)
-
-    bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, BotCommands.echo))
+    bot.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND, BotCommands.echo))
     bot.run_polling()
 
 
