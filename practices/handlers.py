@@ -38,9 +38,14 @@ class PracticingHandler:
                 chat_id=chat_id, session_amount=int(user_text)
                 ).creating_practice_table()
             practice_item = PracticeOneToFour(chat_id=chat_id).process()
+            if practice_item["round_number"] == 1:
+                question_item = practice_item["word"]
+            else:
+                question_item = practice_item["translate"]
+
             options_list = practice_item["choosed_options"]
             await update.message.reply_text(
-                f"""Write translate to the word:\n{practice_item["word"]}""",
+                f"""Write translate to the word:\n{question_item}""",
                 reply_markup=ReplyKeyboard.options_keyboard(options_list))
             return "practice"
         except ValueError:
@@ -54,7 +59,7 @@ class PracticingHandler:
         try:
             is_correct = PracticeOneToFour(
                 chat_id=chat_id, answer_to_check=user_text
-                ).checking_for_correctness()
+                ).correctness_checking()
             if is_correct is True:
                 await update.message.reply_text("You are right")
             else:

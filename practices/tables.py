@@ -16,10 +16,29 @@ class SessionModel(Model):
 
 
 class SessionTable:
-    def __init__(self, *, chat_id):
+    def __init__(self, chat_id):
         self.chat_id = chat_id
 
     def db(self):
         new_table = SessionModel
         new_table._meta.table_name = f"{self.chat_id}_session_table"
+        return new_table
+
+
+class CyclePointModel(Model):
+    start = IntegerField()
+    finish = IntegerField()
+    step = IntegerField()
+
+    class Meta:
+        database = DATABASE
+
+
+class CyclePoint:
+    def __init__(self, chat_id):
+        self.chat_id = chat_id
+
+    def db(self):
+        new_table = CyclePointModel
+        new_table._meta.table_name = f"{self.chat_id}_path"
         return new_table
