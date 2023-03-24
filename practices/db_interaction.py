@@ -180,6 +180,28 @@ class Practice:
         DATABASE.drop_tables([SessionStat(self.chat_id).db()])
         DATABASE.drop_tables([CyclePoint(self.chat_id).db()])
 
+    def question_former(self):
+        session_data = Practice(
+            chat_id=self.chat_id).get_session_data()
+        if session_data is not None:
+            options_query = MainTable(self.chat_id).db().select(
+                MainTable(self.chat_id).db().word,
+                MainTable(self.chat_id).db().translate)
+
+            if session_data["round_number"] == 1:
+                options = [option.translate for option in options_query]
+                element = session_data["translate"]
+            else:
+                options = [option.word for option in options_query]
+                element = session_data["word"]
+            session_data["for_choicer"] = {
+                "options": options,
+                "element": element,
+            }
+            return session_data
+        else:
+            return None
+
     def process(self):
         return NotImplementedError
 
@@ -201,24 +223,18 @@ class PracticeOneToFour(Practice):
 
     def process(self):
         session_data = PracticeOneToFour(
-            chat_id=self.chat_id).get_session_data()
-        if session_data is not None:
-            options_query = MainTable(self.chat_id).db().select(
-                MainTable(self.chat_id).db().word,
-                MainTable(self.chat_id).db().translate)
-
-            if session_data["round_number"] == 1:
-                options = [option.translate for option in options_query]
-                element = session_data["translate"]
-            else:
-                options = [option.word for option in options_query]
-                element = session_data["word"]
-
-            session_data["choosed_options"] = PracticeOneToFour(
-                            options=options, element=element).choicer()
-            return session_data
-        else:
+            chat_id=self.chat_id).question_former()
+        if session_data is None:
             return None
+        else:
+            options = session_data["for_choicer"]["options"]
+            element = session_data["for_choicer"]["element"]
+
+            from_choicer = PracticeOneToFour(
+                options=options, element=element).choicer()
+            session_data["choosed_options"] = from_choicer
+            session_data.pop("for_choicer")
+            return session_data
 
     def correctness_checking(self):
         row_to_check = PracticeOneToFour(
@@ -260,25 +276,18 @@ class PracticeYesNo(Practice):
             is_correct, options, session_amount)
 
     def process(self):
-        session_data = PracticeYesNo(
-            chat_id=self.chat_id).get_session_data()
-        if session_data is not None:
-            options_query = MainTable(self.chat_id).db().select(
-                MainTable(self.chat_id).db().word,
-                MainTable(self.chat_id).db().translate)
-
-            if session_data["round_number"] == 1:
-                options = [option.translate for option in options_query]
-                element = session_data["translate"]
-            else:
-                options = [option.word for option in options_query]
-                element = session_data["word"]
-
-            session_data["choosed_options"] = PracticeYesNo(
-                            options=options, element=element).choicer()
-            return session_data
-        else:
+        session_data = PracticeYesNo(chat_id=self.chat_id).question_former()
+        if session_data is None:
             return None
+        else:
+            options = session_data["for_choicer"]["options"]
+            element = session_data["for_choicer"]["element"]
+
+            from_choicer = PracticeYesNo(
+                options=options, element=element).choicer()
+            session_data["choosed_options"] = from_choicer
+            session_data.pop("for_choicer")
+            return session_data
 
     def correctness_checking(self):
         row_to_check = PracticeOneToFour(
