@@ -38,7 +38,8 @@ class Practice:
         DATABASE.create_tables([SessionStat(self.chat_id).db()])
         DATABASE.create_tables([Stat])
 
-        start_point = CyclePoint(self.chat_id).db().get(CyclePoint(self.chat_id).db().id == 1).start
+        start_point = CyclePoint(self.chat_id).db().get(
+            CyclePoint(self.chat_id).db().id == 1).start
         main_table_query = MainTable(self.chat_id).db().select().order_by(
             MainTable(self.chat_id).db().date).limit(self.session_amount)
 
@@ -61,24 +62,23 @@ class Practice:
 
         decision = choice(["word", "translate"])
         if decision == "word":
-            path_data = {"start": 1, "finish": 3, "step": 1,}
+            path_data = {"start": 1, "finish": 3, "step": 1}
         else:
-            path_data = {"start": 2, "finish": 0, "step": -1,}
+            path_data = {"start": 2, "finish": 0, "step": -1}
         DATABASE.create_tables([CyclePoint(self.chat_id).db()])
         with DATABASE.atomic():
             CyclePoint(self.chat_id).db().create(**path_data)
 
     def get_session_data(self):
-        point = CyclePoint(self.chat_id).db().get(CyclePoint(self.chat_id).db().id == 1)
+        point = CyclePoint(self.chat_id).db().get(
+            CyclePoint(self.chat_id).db().id == 1)
         for round_num in range(point.start, point.finish, point.step):
             session_filter = SessionTable(
                 self.chat_id).db().round_number == round_num
             session_query = SessionTable(self.chat_id).db().select(
-                ).where(session_filter
-                ).order_by(
+                ).where(session_filter).order_by(
                 SessionTable(self.chat_id).db().number_of_mistakes,
-                SessionTable(self.chat_id).db().main_table_id.desc()
-                )
+                SessionTable(self.chat_id).db().main_table_id.desc())
 
             for row in session_query:
                 session_row = {
@@ -94,7 +94,8 @@ class Practice:
 
     def session_data_updater(self):
         data_row = Practice(chat_id=self.chat_id).get_session_data()
-        path_query = CyclePoint(self.chat_id).db().get(CyclePoint(self.chat_id).db().id == 1)
+        path_query = CyclePoint(
+            self.chat_id).db().get(CyclePoint(self.chat_id).db().id == 1)
 
         right_code_number = data_row["table_round_number"] + path_query.step
         right_mistakes_number = data_row["mistakes_number"] + 1
@@ -220,7 +221,8 @@ class PracticeOneToFour(Practice):
             return None
 
     def correctness_checking(self):
-        row_to_check = PracticeOneToFour(chat_id=self.chat_id).process()
+        row_to_check = PracticeOneToFour(
+            chat_id=self.chat_id).get_session_data()
         round1_condition1 = row_to_check["round_number"] == 1
         round1_condition2 = self.answer_to_check == row_to_check["translate"]
         first_round = round1_condition1 and round1_condition2
@@ -246,3 +248,78 @@ class PracticeOneToFour(Practice):
                 final_options.append(option)
         final_options.sort()
         return final_options
+
+
+class PracticeYesNo(Practice):
+    def __init__(
+        self, *, answer_to_check=None, chat_id=None, element=None,
+        is_correct=None, options=None, session_amount=None
+    ):
+        super().__init__(
+            answer_to_check, chat_id, element,
+            is_correct, options, session_amount)
+
+    def process(self):
+        session_data = PracticeYesNo(
+            chat_id=self.chat_id).get_session_data()
+        if session_data is not None:
+            options_query = MainTable(self.chat_id).db().select(
+                MainTable(self.chat_id).db().word,
+                MainTable(self.chat_id).db().translate)
+
+            if session_data["round_number"] == 1:
+                options = [option.translate for option in options_query]
+                element = session_data["translate"]
+            else:
+                options = [option.word for option in options_query]
+                element = session_data["word"]
+
+            session_data["choosed_options"] = PracticeYesNo(
+                            options=options, element=element).choicer()
+            return session_data
+        else:
+            return None
+
+    def correctness_checking(self):
+        row_to_check = PracticeOneToFour(
+            chat_id=self.chat_id).get_session_data()
+        round1_condition1 = row_to_check["round_number"] == 1
+        round2_condition1 = row_to_check["round_number"] == 2
+
+        round1_condition2 = self.answer_to_check == row_to_check["translate"]
+        round2_condition2 = self.answer_to_check == row_to_check["word"]
+
+        try:
+            round1_condition3 = (
+                self.answer_to_check.split(" ", 1)[1] !=
+                row_to_check["translate"])
+            round2_condition3 = (
+                self.answer_to_check.split(" ", 1)[1] != row_to_check["word"])
+        except IndexError:
+            round2_condition3 = False
+            round1_condition3 = False
+
+        first_round = round1_condition1 and \
+            (round1_condition2 or round1_condition3)
+        second_round = round2_condition1 and \
+            (round2_condition2 or round2_condition3)
+
+        if first_round or second_round:
+            evaluation = True
+        else:
+            evaluation = False
+        PracticeYesNo(
+            chat_id=self.chat_id, is_correct=evaluation
+            ).session_data_updater()
+        return evaluation
+
+    def choicer(self):
+        yn = choice([True, False])
+        if yn is True:
+            return self.element
+        else:
+            status = False
+            for attempt in self.options:
+                option = choice(self.options)
+                if option != self.element:
+                    return option

@@ -9,10 +9,16 @@ class ReplyKeyboard:
         ], resize_keyboard=True)
         return keyboard
 
-    def options_keyboard(options_list):
+    def options_keyboard(options):
         keyboard = ReplyKeyboardMarkup([
-            [f"{options_list_item}" for options_list_item in options_list[:2]],
-            [f"{options_list_item}" for options_list_item in options_list[2:4]]
+            [f"{option}" for option in options[:2]],
+            [f"{option}" for option in options[2:4]]
+        ], resize_keyboard=True)
+        return keyboard
+
+    def yn_practice_keyboard(option):
+        keyboard = ReplyKeyboardMarkup([
+            [option, f"Not {option}"],
         ], resize_keyboard=True)
         return keyboard
 

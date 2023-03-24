@@ -5,7 +5,7 @@ from config import API_KEY
 from general.handlers import BotCommands
 from adding.handlers import AddingHandler
 from deletion.handlers import DeletionHandler
-from practices.handlers import PracticingHandler
+from practices.handlers import OneToFourHandler, YesNoHandler
 
 
 def main() -> None:
@@ -45,17 +45,31 @@ def main() -> None:
 
     practice_one_to_four = ConversationHandler(
         entry_points=[MessageHandler(
-            filters.Regex("(OneToFour)"), PracticingHandler.start)],
+            filters.Regex("(OneToFour)"), OneToFourHandler.start)],
         states={
             "select_number": [MessageHandler(
-                filters.TEXT, PracticingHandler.select_number)],
+                filters.TEXT, OneToFourHandler.select_number)],
             "practice": [MessageHandler(
-                filters.TEXT, PracticingHandler.checking)],
+                filters.TEXT, OneToFourHandler.checking)],
         },
         fallbacks=[],
         conversation_timeout=60
     )
     bot.add_handler(practice_one_to_four)
+
+    practice_yes_no = ConversationHandler(
+        entry_points=[MessageHandler(
+            filters.Regex("(YesNo)"), YesNoHandler.start)],
+        states={
+            "select_number": [MessageHandler(
+                filters.TEXT, YesNoHandler.select_number)],
+            "practice": [MessageHandler(
+                filters.TEXT, YesNoHandler.checking)],
+        },
+        fallbacks=[],
+        conversation_timeout=60
+    )
+    bot.add_handler(practice_yes_no)
 
     bot.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND, BotCommands.echo))
