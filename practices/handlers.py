@@ -8,8 +8,10 @@ from utils.reply_keyboards import ReplyKeyboard
 class PracticingHandler:
     async def start(update, context):
         chat_id = update.message.chat.id
+        dict_condition = PracticeOneToFour(
+            chat_id=chat_id).dictionary_checking()
         try:
-            if PracticeOneToFour(chat_id=chat_id).checking_availability() >= 4:
+            if dict_condition >= 4:
                 await update.message.reply_text(show_necessary_words(chat_id))
                 await update.message.reply_text(
                     "Please choose amount of words you want to train",
@@ -22,7 +24,7 @@ class PracticingHandler:
                 return ConversationHandler.END
 
         except TypeError:
-            if PracticeOneToFour.checking_availability() == "No data":
+            if dict_condition == "No data":
                 await update.message.reply_text(
                     "You don't have any dictionary")
                 return ConversationHandler.END
@@ -36,7 +38,6 @@ class PracticingHandler:
                 chat_id=chat_id, session_amount=int(user_text)
                 ).creating_practice_table()
             practice_item = PracticeOneToFour(chat_id=chat_id).process()
-            print(practice_item)
             options_list = practice_item["choosed_options"]
             await update.message.reply_text(
                 f"""Write translate to the word:\n{practice_item["word"]}""",
@@ -51,11 +52,10 @@ class PracticingHandler:
         user_text = update.message.text
         chat_id = update.message.chat.id
         try:
-            checking_answer = PracticeOneToFour(
+            is_correct = PracticeOneToFour(
                 chat_id=chat_id, answer_to_check=user_text
                 ).checking_for_correctness()
-            print(checking_answer)
-            if checking_answer == "right":
+            if is_correct is True:
                 await update.message.reply_text("You are right")
             else:
                 await update.message.reply_text("You are wrong")
@@ -73,15 +73,12 @@ class PracticingHandler:
             return "practice"
 
         except TypeError:
+            result = PracticeOneToFour(chat_id=chat_id).final_stat()
             PracticeOneToFour(chat_id=chat_id).session_table_deletion()
-            stat = PracticeOneToFour(chat_id=chat_id).process_stat()
-            try:
-                result = round(
-                    stat["right_answers"] / stat["all_answers"] * 100, 2)
-            except ZeroDivisionError:
-                result = 0
+
             await update.message.reply_text("Practice is over")
             await update.message.reply_text(
-                f"Your result is {result}%",
+                f"Your practice result is {result['session_stat']}% \
+                Your all time result is {result['overall_stat']}%",
                 reply_markup=ReplyKeyboard.main_keyboard())
             return ConversationHandler.END

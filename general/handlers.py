@@ -16,8 +16,11 @@ class BotCommands:
 
     async def dict_shower(update, context) -> None:
         chat_id = update.message.chat.id
-        await update.message.reply_text(
-            db_content_shower(chat_id=chat_id, command="without_translate"))
+        text = db_content_shower(chat_id=chat_id, command="without_translate")
+        if text is False:
+            await update.message.reply_text("You don't have dictionary")
+        else:
+            await update.message.reply_text(text)
 
     async def echo(update, context) -> None:
         await update.message.reply_text(

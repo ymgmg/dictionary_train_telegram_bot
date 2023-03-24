@@ -14,7 +14,8 @@ def main() -> None:
     bot.add_handler(CommandHandler("start", BotCommands.start))
     bot.add_handler(CommandHandler("main", BotCommands.main_page))
     bot.add_handler(CommandHandler("show_dictionary", BotCommands.dict_shower))
-    bot.add_handler(CommandHandler("n", BotCommands.necessity_counter))
+    bot.add_handler(CommandHandler(
+        "needs_to_train", BotCommands.necessity_counter))
 
     adding_new_word = ConversationHandler(
         entry_points=[MessageHandler(
