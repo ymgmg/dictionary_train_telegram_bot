@@ -34,9 +34,9 @@ class AddingHandler:
                 alike_rows = ""
                 for row in checking_uniqueness:
                     alike_rows += f"\n{row[0]}. {row[1]} - {row[2]}"
-                await update.message.reply_text(
-                    f"It looks alike:\n{alike_rows}.\n\n\
-                    Maybe you'd like to delete this(these) record(s) later")
+                await update.message.reply_text((
+                    f"It looks alike:\n{alike_rows}.\n\n"
+                    "Maybe you'd like to delete this(these) record(s) later"))
                 await update.message.reply_text(
                     adding_confirmation,
                     reply_markup=ReplyKeyboard.yn_keyboard())
