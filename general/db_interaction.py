@@ -7,27 +7,23 @@ from config import DATABASE
 
 
 def db_content_shower(chat_id: str, command: str) -> str:
-    try:
-        main_table_query = MainTable(chat_id).db().select()
-        output_str = ""
-        if command == "without_translate":
-            for row in main_table_query:
-                query_answer = f"{row.id}. {row.word}\n"
-                output_str += query_answer
-        elif command == "with_translate":
-            for row in main_table_query:
-                query_answer = f"{row.id}. {row.word} - {row.translate}\n"
-                output_str += query_answer
-        return output_str
-    except OperationalError:
-        return False
+    main_table_query = MainTable.select().where(MainTable.chat_id == chat_id)
+    if len(main_table_query) == 0:
+        return
+    output_str = ""
+    for row in main_table_query:
+        query_answer = f"{row.word_id}. {row.word}\n"
+        if command == "with_translate":
+            query_answer = f"{row.word_id}. {row.word} - {row.translate}\n"
+        output_str += query_answer
+    return output_str
 
 
 def show_necessary_words(chat_id):
     date_now = datetime.now().timestamp()
-    main_table_query = MainTable(chat_id).db().select()
+    main_table_query = MainTable.select().where(MainTable.chat_id == chat_id)
 
-    condition = date_now - MainTable(chat_id).db().date
+    condition = date_now - MainTable.date
     words_count = main_table_query.count()
     one_day = main_table_query.where(condition > 86400).count()
     three_days = main_table_query.where(condition > 86400 * 3).count()

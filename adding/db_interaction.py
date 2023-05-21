@@ -25,17 +25,18 @@ class AddingDB:
             return None
 
     def creating_adding_table(self) -> None:
-        DATABASE.drop_tables([AddingTable(self.chat_id).db()])
-        DATABASE.create_tables([AddingTable(self.chat_id).db()])
+        AddingTable.delete().where(AddingTable.chat_id == self.chat_id).execute()
+        adding_data = self.adding_data
+        adding_data["chat_id"] = self.chat_id
         with DATABASE.atomic():
-            AddingTable(self.chat_id).db().create(**self.adding_data)
+            AddingTable.create(**self.adding_data)
         return True
 
     def checking_uniqueness_of_new_word(self):
         collecter = AddingDB(chat_id=self.chat_id).collect_addition()
         looks_alike = []
         try:
-            quey = MainTable(self.chat_id).db().select()
+            quey = MainTable.select().where(MainTable.chat_id == self.chat_id)
             for row in quey:
                 answer = [row.id, row.word, row.translate]
 
@@ -49,19 +50,31 @@ class AddingDB:
             return looks_alike
 
     def collect_addition(self):
-        adding_table_query = AddingTable(self.chat_id).db().select()
-        for row in adding_table_query:
-            query_answer = {
-                "word": row.word,
-                "translate": row.translate,
-                "date": int(datetime.now().timestamp())
-            }
+        adding_stuff = AddingTable.get(AddingTable.chat_id == self.chat_id)
+        # for row in adding_table_query:
+        query_answer = {
+            "chat_id" : self.chat_id,
+            "word": adding_stuff.word,
+            "translate": adding_stuff.translate,
+            "date": int(datetime.now().timestamp())
+        }
         return query_answer
 
     def main_table_converter(self) -> None:
         if self.command == "yes":
-            DATABASE.create_tables([MainTable(self.chat_id).db()])
             with DATABASE.atomic():
-                MainTable(self.chat_id).db().create(
+                MainTable.create(
                     **AddingDB(chat_id=self.chat_id).collect_addition())
-        DATABASE.drop_tables([AddingTable(self.chat_id).db()])
+        AddingTable.delete().where(AddingTable.chat_id == self.chat_id).execute()
+        AddingDB(chat_id=self.chat_id).organize_ids()
+
+    def organize_ids(self):
+        main_table_query = MainTable.select().where(MainTable.chat_id == self.chat_id)
+        user_words_list = [row.id for row in main_table_query]
+
+        for row in user_words_list:
+            right_id = user_words_list.index(row) + 1
+            actual_word_id = MainTable.get(MainTable.id == row).word_id
+            if actual_word_id != right_id:
+                MainTable.update(word_id=right_id).where(
+                    MainTable.id == row).execute()

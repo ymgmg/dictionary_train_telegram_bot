@@ -17,7 +17,7 @@ class BotCommands:
     async def dict_shower(update, context) -> None:
         chat_id = update.message.chat.id
         text = db_content_shower(chat_id=chat_id, command="without_translate")
-        if text is False:
+        if not text:
             await update.message.reply_text("You don't have dictionary")
         else:
             await update.message.reply_text(text)
