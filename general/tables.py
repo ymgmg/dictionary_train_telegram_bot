@@ -22,3 +22,24 @@ class UserTable(Model):
     class Meta:
         database = DATABASE
         table_name = "User"
+
+
+class Stat(Model):
+    chat_id = IntegerField()
+    right_answers = IntegerField()
+    all_answers = IntegerField()
+
+    class Meta:
+        database = DATABASE
+        table_name = "Stat"
+
+
+class SessionStat(Model):
+    chat_id = IntegerField()
+    right_answers = IntegerField()
+    all_answers = IntegerField()
+
+    class Meta:
+        database = DATABASE
+        table_name = "SessionStat"
+

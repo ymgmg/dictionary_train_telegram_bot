@@ -4,9 +4,8 @@ from random import choice
 from peewee import *
 
 from config import DATABASE
-from general.tables import MainTable
+from general.tables import MainTable, Stat, SessionStat
 from practices.tables import CyclePoint, SessionTable
-from stats.tables import SessionStat, Stat
 
 
 class Practice:
@@ -23,28 +22,25 @@ class Practice:
 
     def dictionary_checking(self):
         try:
-            main_table_query = MainTable(self.chat_id).db().select()
+            main_table_query = MainTable.select().where(MainTable.chat_id == self.chat_id)
             return len(main_table_query)
         except OperationalError:
             return "No data"
 
     def creating_practice_table(self) -> list:
+        SessionTable.delete().where(SessionTable.chat_id == self.chat_id).execute()
+        SessionStat.delete().where(SessionStat.chat_id == self.chat_id).execute()
+
         Practice(chat_id=self.chat_id).what_starts_first()
 
-        DATABASE.drop_tables([SessionTable(self.chat_id).db()])
-        DATABASE.drop_tables([SessionStat(self.chat_id).db()])
-
-        DATABASE.create_tables([SessionTable(self.chat_id).db()])
-        DATABASE.create_tables([SessionStat(self.chat_id).db()])
-        DATABASE.create_tables([Stat])
-
-        start_point = CyclePoint(self.chat_id).db().get(
-            CyclePoint(self.chat_id).db().id == 1).start
-        main_table_query = MainTable(self.chat_id).db().select().order_by(
-            MainTable(self.chat_id).db().date).limit(self.session_amount)
+        start_point = CyclePoint.get(
+            CyclePoint.chat_id == self.chat_id).start
+        main_table_query = MainTable.select().where(MainTable.chat_id == self.chat_id).order_by(
+            MainTable.date).limit(self.session_amount)
 
         for row in main_table_query:
             session_row = {
+                "chat_id": self.chat_id,
                 "main_table_id": row.id,
                 "word": row.word,
                 "translate": row.translate,
@@ -52,33 +48,33 @@ class Practice:
                 "number_of_mistakes": 0}
 
             with DATABASE.atomic():
-                SessionTable(self.chat_id).db().create(**session_row)
+                SessionTable.create(**session_row)
         with DATABASE.atomic():
-            SessionStat(self.chat_id).db().create(
-               all_answers=0, right_answers=0)
+            SessionStat.create(
+               chat_id=self.chat_id, all_answers=0, right_answers=0)
 
     def what_starts_first(self):
-        DATABASE.drop_tables([CyclePoint(self.chat_id).db()])
-
+        CyclePoint.delete().where(CyclePoint.chat_id == self.chat_id).execute()
         decision = choice(["word", "translate"])
         if decision == "word":
             path_data = {"start": 1, "finish": 3, "step": 1}
         else:
             path_data = {"start": 2, "finish": 0, "step": -1}
-        DATABASE.create_tables([CyclePoint(self.chat_id).db()])
+        path_data["chat_id"] = self.chat_id
         with DATABASE.atomic():
-            CyclePoint(self.chat_id).db().create(**path_data)
+            CyclePoint.create(**path_data)
 
     def get_session_data(self):
-        point = CyclePoint(self.chat_id).db().get(
-            CyclePoint(self.chat_id).db().id == 1)
+        point = CyclePoint.get(
+            CyclePoint.chat_id == self.chat_id)
         for round_num in range(point.start, point.finish, point.step):
-            session_filter = SessionTable(
-                self.chat_id).db().round_number == round_num
-            session_query = SessionTable(self.chat_id).db().select(
-                ).where(session_filter).order_by(
-                SessionTable(self.chat_id).db().number_of_mistakes,
-                SessionTable(self.chat_id).db().main_table_id.desc())
+
+            chat_filter = SessionTable.chat_id == self.chat_id
+            session_filter = SessionTable.round_number == round_num
+            session_query = SessionTable.select(
+                ).where(chat_filter and session_filter).order_by(
+                SessionTable.number_of_mistakes,
+                SessionTable.main_table_id.desc())
 
             for row in session_query:
                 session_row = {
@@ -94,34 +90,32 @@ class Practice:
 
     def session_data_updater(self):
         data_row = Practice(chat_id=self.chat_id).get_session_data()
-        path_query = CyclePoint(
-            self.chat_id).db().get(CyclePoint(self.chat_id).db().id == 1)
+        path_query = CyclePoint.get(CyclePoint.chat_id == self.chat_id)
 
         right_code_number = data_row["table_round_number"] + path_query.step
         right_mistakes_number = data_row["mistakes_number"] + 1
 
         stat_answers_counter = Practice(
             chat_id=self.chat_id).process_stat()
-        SessionStat(self.chat_id).db().update(
+        SessionStat.update(
             all_answers=stat_answers_counter["all_answers"] + 1
-            ).execute()
+            ).where(SessionStat.chat_id == self.chat_id).execute()
         if self.is_correct is True:
-            SessionTable(self.chat_id).db().update(
+            SessionTable.update(
                 round_number=right_code_number).where(
-                SessionTable(self.chat_id).db().id == data_row["id"]
-                ).execute()
+                SessionTable.id == data_row["id"]).execute()
 
-            SessionStat(self.chat_id).db().update(
+            SessionStat.update(
                 right_answers=stat_answers_counter["right_answers"] + 1
-                ).execute()
+                ).where(
+                SessionStat.chat_id == self.chat_id).execute()
         else:
-            SessionTable(self.chat_id).db().update(
+            SessionTable.update(
                 number_of_mistakes=right_mistakes_number).where(
-                SessionTable(self.chat_id).db().id == data_row["id"]
-                ).execute()
+                SessionTable.id == data_row["id"]).execute()
 
     def process_stat(self):
-        session_stat_table_query = SessionStat(self.chat_id).db().select()
+        session_stat_table_query = SessionStat.select().where(SessionStat.chat_id == self.chat_id)
         for row in session_stat_table_query:
             session_stat = {
                 "all_answers": row.all_answers,
@@ -170,23 +164,23 @@ class Practice:
             return round(right_answers / all_answers * 100, 2)
 
     def session_table_deletion(self):
-        session_query = SessionTable(self.chat_id).db().select()
+        session_query = SessionTable.select().where(SessionTable.chat_id == self.chat_id)
         for row in session_query:
-            MainTable(self.chat_id).db().update(
+            MainTable.update(
                 date=int(datetime.now().timestamp())).where(
-                MainTable(self.chat_id).db().id == row.main_table_id
+                MainTable.id == row.main_table_id
                 ).execute()
-        DATABASE.drop_tables([SessionTable(self.chat_id).db()])
-        DATABASE.drop_tables([SessionStat(self.chat_id).db()])
-        DATABASE.drop_tables([CyclePoint(self.chat_id).db()])
+        SessionTable.delete().where(SessionTable.chat_id == self.chat_id).execute()
+        SessionStat.delete().where(SessionStat.chat_id == self.chat_id).execute()
+        CyclePoint.delete().where(CyclePoint.chat_id == self.chat_id).execute()
 
     def question_former(self):
         session_data = Practice(
             chat_id=self.chat_id).get_session_data()
         if session_data is not None:
-            options_query = MainTable(self.chat_id).db().select(
-                MainTable(self.chat_id).db().word,
-                MainTable(self.chat_id).db().translate)
+            options_query = MainTable.select(
+                MainTable.word,
+                MainTable.translate)
 
             if session_data["round_number"] == 1:
                 options = [option.translate for option in options_query]
