@@ -11,7 +11,7 @@ class DeletionDB:
         self.chat_id = chat_id
 
     def obtainig_for_deletion(self):
-        DeletionTable.delete().where(DeletionTable.chat_id == self.chat_id)
+        DeletionTable.delete().where(DeletionTable.chat_id == self.chat_id).execute()
         confirmation_string = ""
 
         for id_to_delete in self.ids_to_delete:
@@ -24,7 +24,7 @@ class DeletionDB:
                 DeletionTable.create(**data)
 
             main_table_query = MainTable.select().where(
-                MainTable.chat_id == self.chat_id and MainTable.word_id == id_to_delete)
+                MainTable.chat_id == self.chat_id, MainTable.word_id == id_to_delete)
 
             for row in main_table_query:
                 list_for_deletion = f"\n{row.word_id}. {row.word} - {row.translate}"
@@ -37,9 +37,9 @@ class DeletionDB:
 
         for row in del_table_query:
             MainTable.delete().where(
-                MainTable.chat_id == self.chat_id and MainTable.word_id == row.del_id).execute()
+                MainTable.chat_id == self.chat_id, MainTable.word_id == row.del_id).execute()
         DeletionDB(chat_id=self.chat_id).organize_ids()
-        DeletionTable.delete().where(DeletionTable.chat_id == self.chat_id)
+        DeletionTable.delete().where(DeletionTable.chat_id == self.chat_id).execute()
 
     def organize_ids(self):
         main_table_query = MainTable.select().where(MainTable.chat_id == self.chat_id)

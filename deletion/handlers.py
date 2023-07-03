@@ -27,6 +27,7 @@ class DeletionHandler:
         user_text = DeletionHandler.user_text_checker(
             user_text=user_text.split(","))
         chat_id = update.message.chat.id
+        print(chat_id)
         if user_text is False:
             await update.message.reply_text("""Something went wrong.\
                 \nMaybe you didn't enter the number""")

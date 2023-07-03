@@ -72,7 +72,7 @@ class Practice:
             chat_filter = SessionTable.chat_id == self.chat_id
             session_filter = SessionTable.round_number == round_num
             session_query = SessionTable.select(
-                ).where(chat_filter and session_filter).order_by(
+                ).where(chat_filter, session_filter).order_by(
                 SessionTable.number_of_mistakes,
                 SessionTable.main_table_id.desc())
 
